@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple REST API to reproduce https://github.com/aws/aws-sam-cli/issues/2457
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: rest_api/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      DefinitionBody:
+        openapi: 3.0.0
+        info:
+          title: REST API
+          version: 1.0.0
+        paths:
+          /foo:
+            get:
+              operationId: getFoo
+              responses:
+                '200':
+                  description: Success
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiFunction.Arn}/invocations"
+            post:
+              operationId: postFoo
+              responses:
+                '200':
+                  description: Success
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiFunction.Arn}/invocations"
+      MethodSettings:
+        - HttpMethod: "*"
+          ResourcePath: "/*"
+      StageName: latest
+      Name: rest-api
